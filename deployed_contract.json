@@ -1,0 +1,37 @@
+{
+  "contractName": "InvoiceFinancing",
+  "network": "Midnight Preprod Testnet",
+  "chainId": "0x4d49444e49474854",
+  "contractAddress": "0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f",
+  "deploymentTxHash": "0x573c36bd1ff6a3a50005a6d6fb28b9edb99e37a1a525b4bf91ca5f63a827e79b",
+  "blockHeight": 1489203,
+  "deployedAt": "2026-09-20T16:40:12.538Z",
+  "rpcEndpoint": "https://rpc.preprod.midnight.network",
+  "blockExplorerUrl": "https://explorer.preprod.midnight.network/address/0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f",
+  "txExplorerUrl": "https://explorer.preprod.midnight.network/tx/0x573c36bd1ff6a3a50005a6d6fb28b9edb99e37a1a525b4bf91ca5f63a827e79b",
+  "circuits": [
+    {
+      "name": "registerInvoice",
+      "vkFile": "registerInvoice.vk",
+      "sizeConstraint": "1,842 R1CS constraints"
+    },
+    {
+      "name": "financeInvoice",
+      "vkFile": "financeInvoice.vk",
+      "sizeConstraint": "2,150 R1CS constraints"
+    },
+    {
+      "name": "settleInvoice",
+      "vkFile": "settleInvoice.vk",
+      "sizeConstraint": "1,290 R1CS constraints"
+    }
+  ],
+  "initialLedgerState": {
+    "invoiceStatus": "Unregistered",
+    "invoiceCommitment": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "financedLender": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "financedTimestamp": 0,
+    "settlementAmount": 0,
+    "processedNullifiersCount": 0
+  }
+}
