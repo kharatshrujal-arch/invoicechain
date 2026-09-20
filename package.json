@@ -1,0 +1,29 @@
+{
+  "name": "invoice-chain",
+  "version": "1.0.0",
+  "description": "Privacy-preserving invoice financing dApp on Midnight Network",
+  "main": "managed/invoice_financing/index.cjs",
+  "bin": {
+    "compact": "./bin/compact.js",
+    "compactc": "./bin/compact.js"
+  },
+  "scripts": {
+    "compile": "node scripts/compile_contract.js",
+    "test": "node tests/invoice_financing.test.js",
+    "deploy": "node scripts/deploy.js",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm run compile && npm --prefix frontend install && npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview"
+  },
+  "keywords": [
+    "midnight",
+    "compact",
+    "privacy",
+    "zero-knowledge",
+    "invoice-financing",
+    "blockchain",
+    "zk-circuits"
+  ],
+  "author": "InvoiceChain Team",
+  "license": "MIT"
+}

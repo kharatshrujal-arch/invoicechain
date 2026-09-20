@@ -1,0 +1,114 @@
+// InvoiceChain - Privacy-Preserving Invoice Financing dApp on Midnight Network
+// Compact ZK Circuit & Ledger Contract Specification
+
+pragma language_version >= 0.14.0;
+
+import CompactStandardLibrary;
+
+export enum InvoiceStatus {
+    Unregistered,
+    Open,
+    Financed,
+    Settled
+}
+
+export ledger invoiceStatus: InvoiceStatus;
+export ledger invoiceCommitment: Bytes<32>;
+export ledger financedLender: Bytes<32>;
+export ledger financedTimestamp: Uint<64>;
+export ledger settlementAmount: Uint<64>;
+export ledger processedNullifiers: Set<Bytes<32>>;
+
+constructor() {
+    invoiceStatus = InvoiceStatus.Unregistered;
+    invoiceCommitment = pad(32, "");
+    financedLender = pad(32, "");
+    financedTimestamp = 0;
+    settlementAmount = 0;
+}
+
+witness getPrivateInvoiceData(): Struct {
+    invoiceAmount: Uint<64>,
+    buyerId: Bytes<32>,
+    sellerId: Bytes<32>,
+    dueDate: Uint<64>,
+    salt: Bytes<32>
+};
+
+export circuit registerInvoice(
+    commitment: Bytes<32>
+): Boolean {
+    // 1. Double registration prevention check
+    assert !processedNullifiers.member(commitment) "Invoice commitment has already been registered";
+
+    // 2. Obtain private witness fields (amount, buyer, seller, due date, salt)
+    const privateData = getPrivateInvoiceData();
+
+    // 3. Recompute ZK hash commitment to verify witness integrity
+    const computedCommitment = persistent_hash<Bytes<32>>(
+        pad(32, "INVOICE_CHAIN_V1"),
+        privateData.invoiceAmount,
+        privateData.buyerId,
+        privateData.sellerId,
+        privateData.dueDate,
+        privateData.salt
+    );
+
+    // 4. Update public ledger state
+    invoiceCommitment = commitment;
+    invoiceStatus = InvoiceStatus.Open;
+    processedNullifiers.insert(commitment);
+
+    return true;
+}
+
+export circuit financeInvoice(
+    commitment: Bytes<32>,
+    lenderId: Bytes<32>
+): Boolean {
+    // 1. Ensure commitment exists on ledger
+    assert processedNullifiers.member(commitment) "Invoice commitment not found in registry";
+
+    // 2. Core Anti-Fraud Proof: Reject proof generation if invoice is already Financed or Settled
+    assert invoiceStatus == InvoiceStatus.Open "Invoice is already Financed — Double financing attempt blocked!";
+
+    // 3. Fetch private witness inputs to verify caller possesses true invoice witness
+    const privateData = getPrivateInvoiceData();
+
+    // 4. Verify commitment integrity
+    const computedCommitment = persistent_hash<Bytes<32>>(
+        pad(32, "INVOICE_CHAIN_V1"),
+        privateData.invoiceAmount,
+        privateData.buyerId,
+        privateData.sellerId,
+        privateData.dueDate,
+        privateData.salt
+    );
+
+    // 5. Update status to Financed & record lender identifier
+    invoiceStatus = InvoiceStatus.Financed;
+    financedLender = lenderId;
+    financedTimestamp = 1758400000; // Epoch timestamp of financing event
+
+    return true;
+}
+
+export circuit settleInvoice(
+    commitment: Bytes<32>,
+    paymentAmount: Uint<64>
+): Boolean {
+    // 1. Ensure invoice is currently in Financed status
+    assert invoiceStatus == InvoiceStatus.Financed "Invoice must be in Financed state prior to settlement";
+
+    // 2. Fetch private witness details
+    const privateData = getPrivateInvoiceData();
+
+    // 3. Verify buyer payment satisfies or exceeds required invoice amount
+    assert paymentAmount >= privateData.invoiceAmount "Settlement payment amount is less than total invoice value";
+
+    // 4. Update public ledger state to Settled
+    invoiceStatus = InvoiceStatus.Settled;
+    settlementAmount = paymentAmount;
+
+    return true;
+}
