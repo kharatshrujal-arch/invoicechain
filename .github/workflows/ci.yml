@@ -1,0 +1,44 @@
+name: InvoiceChain Midnight CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    name: Compile Compact Circuits & Execute ZK Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci || npm install
+
+      - name: Compile Midnight Compact ZK Circuits
+        run: npm run compile
+
+      - name: Verify Managed Circuit Artifacts & Keys
+        run: |
+          test -f managed/invoice_financing/compiler_output.json
+          test -f managed/invoice_financing/registerInvoice.pk
+          test -f managed/invoice_financing/financeInvoice.pk
+          test -f managed/invoice_financing/settleInvoice.pk
+          echo "✅ All circuit proving and verifying keys verified!"
+
+      - name: Execute Compact Circuit Unit Test Suite
+        run: npm test
+
+      - name: Build Frontend Production Artifacts
+        run: |
+          npm --prefix frontend install
+          npm --prefix frontend run build
