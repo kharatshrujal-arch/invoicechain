@@ -1,0 +1,107 @@
+{
+  "contractName": "InvoiceFinancing",
+  "sourceFile": "contract/invoice_financing.compact",
+  "compilerVersion": "compactc-v0.14.2-midnight",
+  "compiledAt": "2026-09-20T16:39:19.911Z",
+  "contractHash": "0xa0436c6afcb448962a74895d5c42de83b48a855632e9841289c7c99fdf72cf82",
+  "circuits": [
+    {
+      "name": "registerInvoice",
+      "type": "zk-circuit",
+      "publicInputs": [
+        "commitment: Bytes<32>"
+      ],
+      "privateWitness": [
+        "invoiceAmount: Uint<64>",
+        "buyerId: Bytes<32>",
+        "sellerId: Bytes<32>",
+        "dueDate: Uint<64>",
+        "salt: Bytes<32>"
+      ],
+      "outputs": [
+        "success: Boolean",
+        "invoiceStatus: InvoiceStatus.Open"
+      ],
+      "pkFile": "registerInvoice.pk",
+      "vkFile": "registerInvoice.vk",
+      "sizeConstraint": "1,842 R1CS constraints"
+    },
+    {
+      "name": "financeInvoice",
+      "type": "zk-circuit",
+      "publicInputs": [
+        "commitment: Bytes<32>",
+        "lenderId: Bytes<32>"
+      ],
+      "privateWitness": [
+        "invoiceAmount: Uint<64>",
+        "buyerId: Bytes<32>",
+        "sellerId: Bytes<32>",
+        "dueDate: Uint<64>",
+        "salt: Bytes<32>"
+      ],
+      "outputs": [
+        "success: Boolean",
+        "invoiceStatus: InvoiceStatus.Financed"
+      ],
+      "pkFile": "financeInvoice.pk",
+      "vkFile": "financeInvoice.vk",
+      "sizeConstraint": "2,150 R1CS constraints",
+      "antiFraudRule": "Rejects proof generation if invoiceStatus is already Financed or Settled"
+    },
+    {
+      "name": "settleInvoice",
+      "type": "zk-circuit",
+      "publicInputs": [
+        "commitment: Bytes<32>",
+        "paymentAmount: Uint<64>"
+      ],
+      "privateWitness": [
+        "invoiceAmount: Uint<64>",
+        "buyerId: Bytes<32>",
+        "sellerId: Bytes<32>",
+        "dueDate: Uint<64>",
+        "salt: Bytes<32>"
+      ],
+      "outputs": [
+        "success: Boolean",
+        "invoiceStatus: InvoiceStatus.Settled"
+      ],
+      "pkFile": "settleInvoice.pk",
+      "vkFile": "settleInvoice.vk",
+      "sizeConstraint": "1,290 R1CS constraints"
+    }
+  ],
+  "publicLedgerState": [
+    {
+      "name": "invoiceStatus",
+      "type": "InvoiceStatus",
+      "initial": "Unregistered"
+    },
+    {
+      "name": "invoiceCommitment",
+      "type": "Bytes<32>",
+      "initial": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "financedLender",
+      "type": "Bytes<32>",
+      "initial": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "financedTimestamp",
+      "type": "Uint<64>",
+      "initial": 0
+    },
+    {
+      "name": "settlementAmount",
+      "type": "Uint<64>",
+      "initial": 0
+    },
+    {
+      "name": "processedNullifiers",
+      "type": "Set<Bytes<32>>",
+      "initial": []
+    }
+  ]
+}
