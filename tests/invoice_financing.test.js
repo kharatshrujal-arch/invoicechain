@@ -111,13 +111,129 @@ async function runTests() {
             contract.settleInvoice(mockWitness, commitment, 50000n);
         } catch (err) {
             threw = true;
-            assert(err.message.includes("must be in Financed state"), `Unexpected error message: ${err.message}`);
+            assert(err.message.includes("must be in Financed or PartiallyFinanced state"), `Unexpected error message: ${err.message}`);
         }
         assert(threw === true, "Circuit failed to reject settlement on already settled invoice");
         console.log("  ✅ Passed: Invalid state transition rejected.\n");
         passed++;
     } catch (err) {
         console.error("  ❌ Test 5 Failed:", err.message);
+        failed++;
+    }
+
+    // Test 6: Partial Invoice Financing Circuit
+    try {
+        console.log("TEST 6: Partial Invoice Financing (financePartialInvoice circuit)");
+        const contractPartial = new InvoiceFinancingContract();
+        const witnessPartial = {
+            invoiceAmount: 100000n,
+            buyerId: "0x" + crypto.createHash('sha256').update("GLOBAL_BUYER_INC").digest('hex'),
+            sellerId: "0x" + crypto.createHash('sha256').update("SMART_PARTS_LLC").digest('hex'),
+            dueDate: 1767225600n,
+            salt: "0x" + crypto.randomBytes(32).toString('hex')
+        };
+        const commitmentPartial = computeCommitment(witnessPartial.invoiceAmount, witnessPartial.buyerId, witnessPartial.sellerId, witnessPartial.dueDate, witnessPartial.salt);
+
+        contractPartial.registerInvoice(witnessPartial, commitmentPartial);
+
+        // 1st partial payment: 40,000 / 100,000 (40%)
+        const p1 = contractPartial.financePartialInvoice(witnessPartial, commitmentPartial, lenderIdA, 40000n);
+        assert(p1.status === InvoiceStatus.PartiallyFinanced, "Status should be PartiallyFinanced");
+        assert(contractPartial.fundedAmount === 40000n, "Funded amount should be 40000");
+
+        // 2nd partial payment: remaining 60,000 / 100,000 (100%)
+        const p2 = contractPartial.financePartialInvoice(witnessPartial, commitmentPartial, lenderIdB, 60000n);
+        assert(p2.status === InvoiceStatus.Financed, "Status should transition to Financed when 100% funded");
+        assert(contractPartial.fundedAmount === 100000n, "Funded amount should be 100000");
+
+        console.log("  ✅ Passed: Partial financing transition from PartiallyFinanced to Financed verified.\n");
+        passed++;
+    } catch (err) {
+        console.error("  ❌ Test 6 Failed:", err.message);
+        failed++;
+    }
+
+    // Test 7: Invoice Cancellation by Seller
+    try {
+        console.log("TEST 7: Invoice Cancellation (cancelInvoice circuit)");
+        const contractCancel = new InvoiceFinancingContract();
+        const witnessCancel = {
+            invoiceAmount: 25000n,
+            buyerId: "0x" + crypto.createHash('sha256').update("CANCEL_BUYER").digest('hex'),
+            sellerId: "0x" + crypto.createHash('sha256').update("CANCEL_SELLER").digest('hex'),
+            dueDate: 1767225600n,
+            salt: "0x" + crypto.randomBytes(32).toString('hex')
+        };
+        const commitmentCancel = computeCommitment(witnessCancel.invoiceAmount, witnessCancel.buyerId, witnessCancel.sellerId, witnessCancel.dueDate, witnessCancel.salt);
+
+        contractCancel.registerInvoice(witnessCancel, commitmentCancel);
+        const cancelRes = contractCancel.cancelInvoice(witnessCancel, commitmentCancel);
+        assert(cancelRes.status === InvoiceStatus.Cancelled, "Status should be Cancelled");
+
+        // Ensure cannot finance cancelled invoice
+        let threw = false;
+        try {
+            contractCancel.financeInvoice(witnessCancel, commitmentCancel, lenderIdA);
+        } catch (err) {
+            threw = true;
+        }
+        assert(threw === true, "Circuit must reject financing on cancelled invoice");
+
+        console.log("  ✅ Passed: Invoice cancelled and subsequent financing blocked.\n");
+        passed++;
+    } catch (err) {
+        console.error("  ❌ Test 7 Failed:", err.message);
+        failed++;
+    }
+
+    // Test 8: Invoice Expiration Circuit
+    try {
+        console.log("TEST 8: Invoice Expiration (expireInvoice circuit)");
+        const contractExpire = new InvoiceFinancingContract();
+        const pastDueDate = 1600000000n; // Past timestamp
+        const witnessExpire = {
+            invoiceAmount: 15000n,
+            buyerId: "0x" + crypto.createHash('sha256').update("EXPIRE_BUYER").digest('hex'),
+            sellerId: "0x" + crypto.createHash('sha256').update("EXPIRE_SELLER").digest('hex'),
+            dueDate: pastDueDate,
+            salt: "0x" + crypto.randomBytes(32).toString('hex')
+        };
+        const commitmentExpire = computeCommitment(witnessExpire.invoiceAmount, witnessExpire.buyerId, witnessExpire.sellerId, witnessExpire.dueDate, witnessExpire.salt);
+
+        contractExpire.registerInvoice(witnessExpire, commitmentExpire);
+        const expireRes = contractExpire.expireInvoice(witnessExpire, commitmentExpire, 1700000000n); // current time > due date
+        assert(expireRes.status === InvoiceStatus.Expired, "Status should be Expired");
+
+        console.log("  ✅ Passed: Overdue invoice successfully marked as Expired.\n");
+        passed++;
+    } catch (err) {
+        console.error("  ❌ Test 8 Failed:", err.message);
+        failed++;
+    }
+
+    // Test 9: Multi-Currency Witness Registration & Settlement
+    try {
+        console.log("TEST 9: Multi-Currency Witness Verification");
+        const witnessCurrency = {
+            invoiceAmount: 40000n,
+            currencyCode: "EUR",
+            buyerId: "0x" + crypto.createHash('sha256').update("EURO_BUYER").digest('hex'),
+            sellerId: "0x" + crypto.createHash('sha256').update("EURO_SELLER").digest('hex'),
+            dueDate: 1767225600n,
+            salt: "0x" + crypto.randomBytes(32).toString('hex')
+        };
+        const commitmentCurrency = computeCommitment(witnessCurrency.invoiceAmount, witnessCurrency.buyerId, witnessCurrency.sellerId, witnessCurrency.dueDate, witnessCurrency.salt);
+
+        const contractCurr = new InvoiceFinancingContract();
+        contractCurr.registerInvoice(witnessCurrency, commitmentCurrency);
+        contractCurr.financeInvoice(witnessCurrency, commitmentCurrency, lenderIdA);
+        const setRes = contractCurr.settleInvoice(witnessCurrency, commitmentCurrency, 40000n);
+
+        assert(setRes.status === InvoiceStatus.Settled, "Multi-currency invoice settled successfully");
+        console.log("  ✅ Passed: Multi-currency invoice registration, financing, and settlement verified.\n");
+        passed++;
+    } catch (err) {
+        console.error("  ❌ Test 9 Failed:", err.message);
         failed++;
     }
 
@@ -131,3 +247,4 @@ async function runTests() {
 }
 
 runTests();
+

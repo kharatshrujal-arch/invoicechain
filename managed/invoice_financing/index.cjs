@@ -7,8 +7,11 @@ var InvoiceStatus;
 (function (InvoiceStatus) {
     InvoiceStatus["Unregistered"] = "Unregistered";
     InvoiceStatus["Open"] = "Open";
+    InvoiceStatus["PartiallyFinanced"] = "PartiallyFinanced";
     InvoiceStatus["Financed"] = "Financed";
     InvoiceStatus["Settled"] = "Settled";
+    InvoiceStatus["Cancelled"] = "Cancelled";
+    InvoiceStatus["Expired"] = "Expired";
 })(InvoiceStatus = exports.InvoiceStatus || (exports.InvoiceStatus = {}));
 
 class InvoiceFinancingContract {
@@ -18,6 +21,7 @@ class InvoiceFinancingContract {
         this.financedLender = "0x" + "0".repeat(64);
         this.financedTimestamp = 0n;
         this.settlementAmount = 0n;
+        this.fundedAmount = 0n;
         this.processedNullifiers = new Set();
         this.invoicesMap = new Map();
     }
@@ -39,6 +43,7 @@ class InvoiceFinancingContract {
             lender: null,
             financedAt: 0n,
             settledAmount: 0n,
+            fundedAmount: 0n,
             witness
         });
 
@@ -55,17 +60,20 @@ class InvoiceFinancingContract {
         }
         
         const invoiceData = this.invoicesMap.get(commitment);
-        if (!invoiceData || invoiceData.status !== InvoiceStatus.Open) {
+        if (!invoiceData || (invoiceData.status !== InvoiceStatus.Open && invoiceData.status !== InvoiceStatus.PartiallyFinanced)) {
             throw new Error("Invoice is already Financed — Double financing attempt blocked!");
         }
 
+        const totalAmount = BigInt(witness.invoiceAmount);
         invoiceData.status = InvoiceStatus.Financed;
         invoiceData.lender = lenderId;
         invoiceData.financedAt = BigInt(Math.floor(Date.now() / 1000));
+        invoiceData.fundedAmount = totalAmount;
 
         this.invoiceStatus = InvoiceStatus.Financed;
         this.financedLender = lenderId;
         this.financedTimestamp = invoiceData.financedAt;
+        this.fundedAmount = totalAmount;
 
         return {
             success: true,
@@ -75,10 +83,51 @@ class InvoiceFinancingContract {
         };
     }
 
+    financePartialInvoice(witness, commitment, lenderId, partialAmount) {
+        if (!this.processedNullifiers.has(commitment)) {
+            throw new Error("Invoice commitment not found in registry");
+        }
+
+        const invoiceData = this.invoicesMap.get(commitment);
+        if (!invoiceData || (invoiceData.status !== InvoiceStatus.Open && invoiceData.status !== InvoiceStatus.PartiallyFinanced)) {
+            throw new Error("Invoice is already Financed — Double financing attempt blocked!");
+        }
+
+        const addAmount = BigInt(partialAmount);
+        const currentFunded = invoiceData.fundedAmount || 0n;
+        const newFundedAmount = currentFunded + addAmount;
+        const totalAmount = BigInt(witness.invoiceAmount);
+
+        if (newFundedAmount > totalAmount) {
+            throw new Error("Partial funding exceeds total invoice amount");
+        }
+
+        const isFullyFunded = newFundedAmount === totalAmount;
+        const newStatus = isFullyFunded ? InvoiceStatus.Financed : InvoiceStatus.PartiallyFinanced;
+
+        invoiceData.status = newStatus;
+        invoiceData.lender = lenderId;
+        invoiceData.financedAt = BigInt(Math.floor(Date.now() / 1000));
+        invoiceData.fundedAmount = newFundedAmount;
+
+        this.invoiceStatus = newStatus;
+        this.financedLender = lenderId;
+        this.financedTimestamp = invoiceData.financedAt;
+        this.fundedAmount = newFundedAmount;
+
+        return {
+            success: true,
+            commitment,
+            lenderId,
+            fundedAmount: newFundedAmount,
+            status: newStatus
+        };
+    }
+
     settleInvoice(witness, commitment, paymentAmount) {
         const invoiceData = this.invoicesMap.get(commitment);
-        if (!invoiceData || invoiceData.status !== InvoiceStatus.Financed) {
-            throw new Error("Invoice must be in Financed state prior to settlement");
+        if (!invoiceData || (invoiceData.status !== InvoiceStatus.Financed && invoiceData.status !== InvoiceStatus.PartiallyFinanced)) {
+            throw new Error("Invoice must be in Financed or PartiallyFinanced state prior to settlement");
         }
 
         if (BigInt(paymentAmount) < BigInt(witness.invoiceAmount)) {
@@ -98,6 +147,52 @@ class InvoiceFinancingContract {
             status: InvoiceStatus.Settled
         };
     }
+
+    cancelInvoice(witness, commitment) {
+        if (!this.processedNullifiers.has(commitment)) {
+            throw new Error("Invoice commitment not found in registry");
+        }
+
+        const invoiceData = this.invoicesMap.get(commitment);
+        if (!invoiceData || invoiceData.status !== InvoiceStatus.Open) {
+            throw new Error("Only open invoices can be cancelled");
+        }
+
+        invoiceData.status = InvoiceStatus.Cancelled;
+        this.invoiceStatus = InvoiceStatus.Cancelled;
+
+        return {
+            success: true,
+            commitment,
+            status: InvoiceStatus.Cancelled
+        };
+    }
+
+    expireInvoice(witness, commitment, currentTimestamp) {
+        if (!this.processedNullifiers.has(commitment)) {
+            throw new Error("Invoice commitment not found in registry");
+        }
+
+        const invoiceData = this.invoicesMap.get(commitment);
+        if (!invoiceData || (invoiceData.status !== InvoiceStatus.Open && invoiceData.status !== InvoiceStatus.PartiallyFinanced)) {
+            throw new Error("Invoice cannot be expired in its current state");
+        }
+
+        const dueDateTimestamp = BigInt(witness.dueDate || 0);
+        if (BigInt(currentTimestamp) <= dueDateTimestamp) {
+            throw new Error("Invoice has not passed its due date");
+        }
+
+        invoiceData.status = InvoiceStatus.Expired;
+        this.invoiceStatus = InvoiceStatus.Expired;
+
+        return {
+            success: true,
+            commitment,
+            status: InvoiceStatus.Expired
+        };
+    }
 }
 
 exports.InvoiceFinancingContract = InvoiceFinancingContract;
+

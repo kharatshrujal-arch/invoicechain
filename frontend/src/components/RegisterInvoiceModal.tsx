@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Sparkles, CheckCircle, AlertCircle, Cpu } from 'lucide-react';
 import { midnightClient, CircuitExecutionProgress } from '../utils/midnightClient';
 import { generateRandomSalt } from '../utils/cryptoUtils';
+import { SUPPORTED_CURRENCIES, CurrencyCode } from '../utils/currencyConverter';
 
 interface RegisterInvoiceModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface RegisterInvoiceModalProps {
 
 export const RegisterInvoiceModal: React.FC<RegisterInvoiceModalProps> = ({ onClose, onSuccess }) => {
   const [amount, setAmount] = useState<string>('75000');
+  const [currencyCode, setCurrencyCode] = useState<CurrencyCode>('USD');
   const [buyerName, setBuyerName] = useState<string>('Global Logistics Corp');
   const [sellerName, setSellerName] = useState<string>('Apex Manufacturing LLC');
   const [dueDate, setDueDate] = useState<string>('2026-12-31');
@@ -29,6 +31,7 @@ export const RegisterInvoiceModal: React.FC<RegisterInvoiceModalProps> = ({ onCl
         buyerName,
         sellerName,
         dueDate,
+        currencyCode,
         (prog) => setProgress(prog)
       );
       setTimeout(() => {
@@ -70,10 +73,10 @@ export const RegisterInvoiceModal: React.FC<RegisterInvoiceModalProps> = ({ onCl
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.35rem', fontWeight: 600 }}>
-                Invoice Amount ($ USD)
+                Invoice Amount
               </label>
               <input
                 type="number"
@@ -87,17 +90,36 @@ export const RegisterInvoiceModal: React.FC<RegisterInvoiceModalProps> = ({ onCl
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.35rem', fontWeight: 600 }}>
-                Due Date
+                Currency
               </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={e => setDueDate(e.target.value)}
+              <select
+                value={currencyCode}
+                onChange={e => setCurrencyCode(e.target.value as CurrencyCode)}
                 className="glass-input"
-                required
                 disabled={isSubmitting}
-              />
+                style={{ background: 'rgba(30, 41, 59, 0.9)', color: '#fff' }}
+              >
+                {Object.values(SUPPORTED_CURRENCIES).map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.code} ({c.symbol})
+                  </option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '0.35rem', fontWeight: 600 }}>
+              Due Date
+            </label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              className="glass-input"
+              required
+              disabled={isSubmitting}
+            />
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
@@ -171,3 +193,4 @@ export const RegisterInvoiceModal: React.FC<RegisterInvoiceModalProps> = ({ onCl
     </div>
   );
 };
+

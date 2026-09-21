@@ -189,6 +189,25 @@ body {
   border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
+.badge-partiallyfinanced {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.badge-cancelled {
+  background: rgba(244, 63, 94, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.badge-expired {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+
 /* ZK Proof Progress Bar */
 .zk-progress-bar {
   width: 100%;

@@ -7,14 +7,17 @@ import { SettleInvoiceModal } from './components/SettleInvoiceModal';
 import { PrivacyComparisonPanel } from './components/PrivacyComparisonPanel';
 import { AntiFraudDemoPanel } from './components/AntiFraudDemoPanel';
 import { InvoiceRegistryTable } from './components/InvoiceRegistryTable';
+import { LenderAnalyticsDashboard } from './components/LenderAnalyticsDashboard';
 import { laceAdapter, LaceWalletState } from './utils/laceWallet';
 import { midnightClient, InvoiceRecord } from './utils/midnightClient';
-import { Shield, Sparkles, Lock, CheckCircle2, Zap } from 'lucide-react';
+import { Shield, Sparkles, Lock, CheckCircle2, Zap, BarChart3, ListFilter, ShieldAlert } from 'lucide-react';
 
 export default function App() {
   const [walletState, setWalletState] = useState<LaceWalletState>(laceAdapter.getState());
   const [invoices, setInvoices] = useState<InvoiceRecord[]>(midnightClient.getInvoices());
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(invoices[0] || null);
+
+  const [activeTab, setActiveTab] = useState<'registry' | 'analytics' | 'antifraud'>('registry');
 
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -55,7 +58,7 @@ export default function App() {
 
       <main style={{ flex: 1, maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem' }}>
         {/* Hero Section */}
-        <section style={{ marginBottom: '2.5rem', textAlign: 'center', position: 'relative' }}>
+        <section style={{ marginBottom: '2rem', textAlign: 'center', position: 'relative' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '0.8rem', color: '#a5b4fc', marginBottom: '1rem' }}>
             <Sparkles size={14} color="#818cf8" />
             <span>Midnight Network Hackathon Project — Preprod Live Testnet</span>
@@ -69,7 +72,7 @@ export default function App() {
           </h1>
 
           <p style={{ maxWidth: '760px', margin: '0 auto 1.75rem', color: '#94a3b8', fontSize: '1.05rem', lineHeight: 1.6 }}>
-            InvoiceChain uses **Midnight Compact ZK circuits** to cryptographically prove an invoice has not been financed elsewhere—<strong>without revealing the invoice dollar amount, buyer corporate identity, or seller MSME identity on public ledger state.</strong>
+            InvoiceChain uses <strong>Midnight Compact ZK circuits</strong> to cryptographically prove an invoice has not been financed elsewhere—<strong>without revealing invoice amounts, currencies, buyer identity, or seller identity on public ledger state.</strong>
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
@@ -77,26 +80,93 @@ export default function App() {
               <Shield size={18} /> Register Private Invoice
             </button>
             <button onClick={() => setShowFinanceModal(true)} className="btn-secondary" style={{ padding: '0.85rem 1.5rem', fontSize: '1rem', borderColor: 'rgba(6, 182, 212, 0.4)', color: '#38bdf8' }}>
-              <Zap size={18} /> Finance Open Invoice
+              <Zap size={18} /> Finance / Fund Invoice
             </button>
           </div>
         </section>
 
-        {/* Observable Privacy Behavior Panel */}
-        <PrivacyComparisonPanel invoice={selectedInvoice} />
+        {/* Section Tabs */}
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginBottom: '2rem' }}>
+          <button
+            onClick={() => setActiveTab('registry')}
+            style={{
+              padding: '0.65rem 1.25rem',
+              borderRadius: '12px',
+              border: activeTab === 'registry' ? '1px solid #818cf8' : '1px solid rgba(255,255,255,0.1)',
+              background: activeTab === 'registry' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(15, 23, 42, 0.6)',
+              color: activeTab === 'registry' ? '#fff' : '#94a3b8',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <ListFilter size={16} /> Invoice Ledger & Actions
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            style={{
+              padding: '0.65rem 1.25rem',
+              borderRadius: '12px',
+              border: activeTab === 'analytics' ? '1px solid #34d399' : '1px solid rgba(255,255,255,0.1)',
+              background: activeTab === 'analytics' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(15, 23, 42, 0.6)',
+              color: activeTab === 'analytics' ? '#fff' : '#94a3b8',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <BarChart3 size={16} color="#34d399" /> Lender Risk Analytics & Credit Score
+          </button>
+          <button
+            onClick={() => setActiveTab('antifraud')}
+            style={{
+              padding: '0.65rem 1.25rem',
+              borderRadius: '12px',
+              border: activeTab === 'antifraud' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+              background: activeTab === 'antifraud' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.6)',
+              color: activeTab === 'antifraud' ? '#fff' : '#94a3b8',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <ShieldAlert size={16} color="#38bdf8" /> Anti-Fraud ZK Prover Simulator
+          </button>
+        </div>
 
-        {/* Interactive Anti-Fraud Proof Demo */}
-        <AntiFraudDemoPanel invoices={invoices} onRefresh={handleRefresh} />
+        {activeTab === 'registry' && (
+          <>
+            {/* Observable Privacy Behavior Panel */}
+            <PrivacyComparisonPanel invoice={selectedInvoice} />
 
-        {/* Registered Invoices Ledger Table */}
-        <InvoiceRegistryTable
-          invoices={invoices}
-          selectedCommitment={selectedInvoice?.commitment || null}
-          onSelectInvoice={(inv) => setSelectedInvoice(inv)}
-          onOpenFinanceModal={() => setShowFinanceModal(true)}
-          onOpenSettleModal={() => setShowSettleModal(true)}
-          explorerUrl={midnightClient.explorerUrl}
-        />
+            {/* Registered Invoices Ledger Table */}
+            <InvoiceRegistryTable
+              invoices={invoices}
+              selectedCommitment={selectedInvoice?.commitment || null}
+              onSelectInvoice={(inv) => setSelectedInvoice(inv)}
+              onOpenFinanceModal={() => setShowFinanceModal(true)}
+              onOpenSettleModal={() => setShowSettleModal(true)}
+              explorerUrl={midnightClient.explorerUrl}
+            />
+          </>
+        )}
+
+        {activeTab === 'analytics' && (
+          <LenderAnalyticsDashboard invoices={invoices} />
+        )}
+
+        {activeTab === 'antifraud' && (
+          <AntiFraudDemoPanel invoices={invoices} onRefresh={handleRefresh} />
+        )}
       </main>
 
       <footer style={{ borderTop: '1px solid rgba(148, 163, 184, 0.1)', background: 'rgba(9, 13, 22, 0.9)', padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: '#64748b' }}>
@@ -111,3 +181,4 @@ export default function App() {
     </div>
   );
 }
+

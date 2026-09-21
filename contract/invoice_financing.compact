@@ -8,8 +8,11 @@ import CompactStandardLibrary;
 export enum InvoiceStatus {
     Unregistered,
     Open,
+    PartiallyFinanced,
     Financed,
-    Settled
+    Settled,
+    Cancelled,
+    Expired
 }
 
 export ledger invoiceStatus: InvoiceStatus;
@@ -17,6 +20,7 @@ export ledger invoiceCommitment: Bytes<32>;
 export ledger financedLender: Bytes<32>;
 export ledger financedTimestamp: Uint<64>;
 export ledger settlementAmount: Uint<64>;
+export ledger fundedAmount: Uint<64>;
 export ledger processedNullifiers: Set<Bytes<32>>;
 
 constructor() {
@@ -25,6 +29,7 @@ constructor() {
     financedLender = pad(32, "");
     financedTimestamp = 0;
     settlementAmount = 0;
+    fundedAmount = 0;
 }
 
 witness getPrivateInvoiceData(): Struct {
@@ -32,7 +37,8 @@ witness getPrivateInvoiceData(): Struct {
     buyerId: Bytes<32>,
     sellerId: Bytes<32>,
     dueDate: Uint<64>,
-    salt: Bytes<32>
+    salt: Bytes<32>,
+    currencyCode: Bytes<8>
 };
 
 export circuit registerInvoice(
@@ -41,7 +47,7 @@ export circuit registerInvoice(
     // 1. Double registration prevention check
     assert !processedNullifiers.member(commitment) "Invoice commitment has already been registered";
 
-    // 2. Obtain private witness fields (amount, buyer, seller, due date, salt)
+    // 2. Obtain private witness fields (amount, buyer, seller, due date, salt, currency)
     const privateData = getPrivateInvoiceData();
 
     // 3. Recompute ZK hash commitment to verify witness integrity
@@ -57,6 +63,7 @@ export circuit registerInvoice(
     // 4. Update public ledger state
     invoiceCommitment = commitment;
     invoiceStatus = InvoiceStatus.Open;
+    fundedAmount = 0;
     processedNullifiers.insert(commitment);
 
     return true;
@@ -70,25 +77,42 @@ export circuit financeInvoice(
     assert processedNullifiers.member(commitment) "Invoice commitment not found in registry";
 
     // 2. Core Anti-Fraud Proof: Reject proof generation if invoice is already Financed or Settled
-    assert invoiceStatus == InvoiceStatus.Open "Invoice is already Financed — Double financing attempt blocked!";
+    assert invoiceStatus == InvoiceStatus.Open || invoiceStatus == InvoiceStatus.PartiallyFinanced "Invoice is already Financed — Double financing attempt blocked!";
 
     // 3. Fetch private witness inputs to verify caller possesses true invoice witness
     const privateData = getPrivateInvoiceData();
 
-    // 4. Verify commitment integrity
-    const computedCommitment = persistent_hash<Bytes<32>>(
-        pad(32, "INVOICE_CHAIN_V1"),
-        privateData.invoiceAmount,
-        privateData.buyerId,
-        privateData.sellerId,
-        privateData.dueDate,
-        privateData.salt
-    );
-
-    // 5. Update status to Financed & record lender identifier
+    // 4. Update status to Financed & record lender identifier
     invoiceStatus = InvoiceStatus.Financed;
     financedLender = lenderId;
     financedTimestamp = 1758400000; // Epoch timestamp of financing event
+    fundedAmount = privateData.invoiceAmount;
+
+    return true;
+}
+
+export circuit financePartialInvoice(
+    commitment: Bytes<32>,
+    lenderId: Bytes<32>,
+    partialAmount: Uint<64>
+): Boolean {
+    assert processedNullifiers.member(commitment) "Invoice commitment not found in registry";
+    assert invoiceStatus == InvoiceStatus.Open || invoiceStatus == InvoiceStatus.PartiallyFinanced "Invoice is already Financed — Double financing attempt blocked!";
+
+    const privateData = getPrivateInvoiceData();
+    const currentFunded = fundedAmount;
+    const newFundedAmount = currentFunded + partialAmount;
+    assert newFundedAmount <= privateData.invoiceAmount "Partial funding exceeds total invoice amount";
+
+    fundedAmount = newFundedAmount;
+    financedLender = lenderId;
+    financedTimestamp = 1758400000;
+
+    if (newFundedAmount == privateData.invoiceAmount) {
+        invoiceStatus = InvoiceStatus.Financed;
+    } else {
+        invoiceStatus = InvoiceStatus.PartiallyFinanced;
+    }
 
     return true;
 }
@@ -97,8 +121,8 @@ export circuit settleInvoice(
     commitment: Bytes<32>,
     paymentAmount: Uint<64>
 ): Boolean {
-    // 1. Ensure invoice is currently in Financed status
-    assert invoiceStatus == InvoiceStatus.Financed "Invoice must be in Financed state prior to settlement";
+    // 1. Ensure invoice is currently in Financed or PartiallyFinanced status
+    assert invoiceStatus == InvoiceStatus.Financed || invoiceStatus == InvoiceStatus.PartiallyFinanced "Invoice must be in Financed or PartiallyFinanced state prior to settlement";
 
     // 2. Fetch private witness details
     const privateData = getPrivateInvoiceData();
@@ -112,3 +136,28 @@ export circuit settleInvoice(
 
     return true;
 }
+
+export circuit cancelInvoice(
+    commitment: Bytes<32>
+): Boolean {
+    assert processedNullifiers.member(commitment) "Invoice commitment not found in registry";
+    assert invoiceStatus == InvoiceStatus.Open "Only open invoices can be cancelled";
+
+    invoiceStatus = InvoiceStatus.Cancelled;
+    return true;
+}
+
+export circuit expireInvoice(
+    commitment: Bytes<32>,
+    currentTimestamp: Uint<64>
+): Boolean {
+    assert processedNullifiers.member(commitment) "Invoice commitment not found in registry";
+    assert invoiceStatus == InvoiceStatus.Open || invoiceStatus == InvoiceStatus.PartiallyFinanced "Invoice cannot be expired in its current state";
+
+    const privateData = getPrivateInvoiceData();
+    assert currentTimestamp > privateData.dueDate "Invoice has not passed its due date";
+
+    invoiceStatus = InvoiceStatus.Expired;
+    return true;
+}
+
