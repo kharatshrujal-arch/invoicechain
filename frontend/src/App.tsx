@@ -170,7 +170,7 @@ export default function App() {
       </main>
 
       <footer style={{ borderTop: '1px solid rgba(148, 163, 184, 0.1)', background: 'rgba(9, 13, 22, 0.9)', padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: '#64748b' }}>
-        <p>Built for Midnight Network — Compact Circuit Contract: <span className="mono" style={{ color: '#818cf8' }}>0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f</span></p>
+        <p>Built for Midnight Network — Compact Circuit Contract: <span className="mono" style={{ color: '#818cf8', wordBreak: 'break-all' }}>{midnightClient.contractAddress}</span></p>
       </footer>
 
       {/* Modals */}

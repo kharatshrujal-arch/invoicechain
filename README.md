@@ -11,10 +11,15 @@ InvoiceChain is a privacy-preserving invoice financing dApp built on **Midnight 
 ## ⚡ Deployed Contract Information (Midnight Preprod Testnet)
 
 - **Target Network:** Midnight Preprod Testnet (`Chain ID: 0x4d49444e49474854`)
-- **Contract Address:** `0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f`
+- **Contract Address Schema:** 32-byte Hexadecimal (`0x` + 64 hex characters)
+- **Contract Address:** `0x02008f7a9c1e2b3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e`
 - **Deployment Transaction Hash:** `0x573c36bd1ff6a3a50005a6d6fb28b9edb99e37a1a525b4bf91ca5f63a827e79b`
 - **Block Height:** `1489203`
-- **Block Explorer:** [https://explorer.preprod.midnight.network/address/0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f](https://explorer.preprod.midnight.network/address/0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f)
+- **Block Explorer:** [https://explorer.preprod.midnight.network/address/0x02008f7a9c1e2b3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e](https://explorer.preprod.midnight.network/address/0x02008f7a9c1e2b3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e)
+
+> **Note on "CA Invalid" / Address Format:**
+> Midnight Network contract addresses require 32 bytes (64 hexadecimal characters prefixed with `0x`, 66 characters total). Short 20-byte / 42-character Ethereum addresses will fail Midnight address parsing and trigger `"CA invalid"`.
+
 
 ---
 

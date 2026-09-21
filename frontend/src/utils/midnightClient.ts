@@ -2,6 +2,7 @@
 
 import { computeInvoiceCommitment, generateRandomSalt } from './cryptoUtils';
 import { CurrencyCode, convertCurrency } from './currencyConverter';
+import { appConfig, isValidMidnightAddress } from './config';
 
 export type InvoiceStatus = 'Open' | 'PartiallyFinanced' | 'Financed' | 'Settled' | 'Cancelled' | 'Expired';
 
@@ -42,9 +43,22 @@ export interface CircuitExecutionProgress {
 class MidnightClient {
   private static instance: MidnightClient;
 
-  public readonly contractAddress = "0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f";
-  public readonly rpcEndpoint = "https://rpc.preprod.midnight.network";
-  public readonly explorerUrl = `https://explorer.preprod.midnight.network/address/0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f`;
+  public get contractAddress(): string {
+    return appConfig.contractAddress;
+  }
+
+  public get rpcEndpoint(): string {
+    return appConfig.rpcEndpoint;
+  }
+
+  public get explorerUrl(): string {
+    return appConfig.explorerUrl;
+  }
+
+  public get isContractValid(): boolean {
+    return appConfig.isContractValid;
+  }
+
 
   private registry: Map<string, InvoiceRecord> = new Map();
   private processedCommitments: Set<string> = new Set();

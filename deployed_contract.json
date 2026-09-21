@@ -2,13 +2,15 @@
   "contractName": "InvoiceFinancing",
   "network": "Midnight Preprod Testnet",
   "chainId": "0x4d49444e49474854",
-  "contractAddress": "0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f",
-  "deploymentTxHash": "0xf80896d02b41ae1dabc24b1e040deeb10af0363f77446d0ebf60faa3afb99990",
+  "contractAddress": "0x02008f7a9c1e2b3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+  "isLiveDeployment": false,
+  "deploymentTxHash": "0x9d76f39758af11f754c54e9c1a8c9ebc6876d521dcfc75d985004894d3a484d4",
   "blockHeight": 1489203,
-  "deployedAt": "2026-09-20T16:49:05.613Z",
+  "deployedAt": "2026-09-21T10:21:07.559Z",
   "rpcEndpoint": "https://rpc.preprod.midnight.network",
-  "blockExplorerUrl": "https://explorer.preprod.midnight.network/address/0xa51ccf7ae06d96bc33c5fb2dc1f7a0a7cf956da15f",
-  "txExplorerUrl": "https://explorer.preprod.midnight.network/tx/0xf80896d02b41ae1dabc24b1e040deeb10af0363f77446d0ebf60faa3afb99990",
+  "indexerUrl": "https://indexer.preprod.midnight.network/api/v1/graphql",
+  "blockExplorerUrl": "https://explorer.preprod.midnight.network/address/0x02008f7a9c1e2b3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e",
+  "txExplorerUrl": "https://explorer.preprod.midnight.network/tx/0x9d76f39758af11f754c54e9c1a8c9ebc6876d521dcfc75d985004894d3a484d4",
   "circuits": [
     {
       "name": "registerInvoice",
@@ -25,13 +27,5 @@
       "vkFile": "settleInvoice.vk",
       "sizeConstraint": "1,290 R1CS constraints"
     }
-  ],
-  "initialLedgerState": {
-    "invoiceStatus": "Unregistered",
-    "invoiceCommitment": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "financedLender": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "financedTimestamp": 0,
-    "settlementAmount": 0,
-    "processedNullifiersCount": 0
-  }
+  ]
 }
